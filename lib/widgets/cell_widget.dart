@@ -68,6 +68,7 @@ class CellWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      key: key,
       onTap: onTap,
       onLongPress: onLongPress,
       child: Container(

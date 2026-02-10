@@ -23,6 +23,7 @@ class DifficultyScreen extends StatelessWidget {
             children: Difficulty.all.map((difficulty) {
               final isSelected = controller.difficulty == difficulty;
               return Card(
+                key: Key('difficulty_${difficulty.name.toLowerCase()}'),
                 margin: const EdgeInsets.only(bottom: 16),
                 elevation: isSelected ? 8 : 2,
                 color: isSelected ? Colors.blue[100] : Colors.white,

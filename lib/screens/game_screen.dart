@@ -41,6 +41,7 @@ class GameScreen extends StatelessWidget {
         foregroundColor: Colors.white,
         actions: [
           IconButton(
+            key: const Key('settings_button'),
             icon: const Icon(Icons.settings),
             onPressed: () {
               Navigator.push(
@@ -64,6 +65,7 @@ class GameScreen extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       Container(
+                        key: const Key('mine_counter'),
                         padding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 8,
@@ -82,6 +84,7 @@ class GameScreen extends StatelessWidget {
                             const SizedBox(width: 8),
                             Text(
                               '${controller.remainingMines}',
+                              key: const Key('mine_counter_text'),
                               style: const TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
@@ -92,6 +95,7 @@ class GameScreen extends StatelessWidget {
                         ),
                       ),
                       IconButton(
+                        key: const Key('reset_button'),
                         icon: Icon(
                           _getResetIcon(controller.gameState),
                           size: 40,
@@ -100,6 +104,7 @@ class GameScreen extends StatelessWidget {
                         onPressed: controller.resetGame,
                       ),
                       Container(
+                        key: const Key('timer'),
                         padding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 8,
@@ -118,6 +123,7 @@ class GameScreen extends StatelessWidget {
                             const SizedBox(width: 8),
                             Text(
                               '${controller.elapsedSeconds}',
+                              key: const Key('timer_text'),
                               style: const TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
@@ -142,6 +148,7 @@ class GameScreen extends StatelessWidget {
               builder: (context, controller, child) {
                 if (controller.gameState == GameState.won) {
                   return Container(
+                    key: const Key('win_message'),
                     padding: const EdgeInsets.all(16),
                     child: const Text(
                       '🎉 You Won! 🎉',
@@ -154,6 +161,7 @@ class GameScreen extends StatelessWidget {
                   );
                 } else if (controller.gameState == GameState.lost) {
                   return Container(
+                    key: const Key('game_over_message'),
                     padding: const EdgeInsets.all(16),
                     child: const Text(
                       '💥 Game Over 💥',

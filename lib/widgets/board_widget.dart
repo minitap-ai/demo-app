@@ -29,6 +29,7 @@ class BoardWidget extends StatelessWidget {
             child: SingleChildScrollView(
               scrollDirection: Axis.vertical,
               child: Column(
+                key: const Key('game_board'),
                 mainAxisSize: MainAxisSize.min,
                 children: List.generate(
                   difficulty.rows,
@@ -37,6 +38,7 @@ class BoardWidget extends StatelessWidget {
                     children: List.generate(
                       difficulty.cols,
                       (col) => CellWidget(
+                        key: Key('cell_${row}_$col'),
                         cell: board[row][col],
                         size: cellSize,
                         onTap: () => controller.revealCell(row, col),
