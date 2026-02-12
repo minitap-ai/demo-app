@@ -14,6 +14,8 @@ class GameController extends ChangeNotifier {
   int _elapsedSeconds = 0;
   Timer? _timer;
   bool _firstClick = true;
+  int _hintsRemaining = 3;
+  static const int _maxHints = 3;
 
   Difficulty get difficulty => _difficulty;
   List<List<Cell>> get board => _board;
@@ -21,6 +23,10 @@ class GameController extends ChangeNotifier {
   int get flagCount => _flagCount;
   int get remainingMines => _difficulty.mines - _flagCount;
   int get elapsedSeconds => _elapsedSeconds;
+  int get hintsRemaining => _hintsRemaining;
+  bool get canUseHint => _hintsRemaining > 0 && 
+                         _gameState == GameState.playing &&
+                         !_firstClick;
 
   GameController() {
     _initializeBoard();
@@ -173,6 +179,55 @@ class GameController extends ChangeNotifier {
     }
   }
 
+  void useHint() {
+    if (!canUseHint) return;
+
+    final safeCells = _findSafeCells();
+    if (safeCells.isEmpty) return;
+
+    Cell? bestCell = _selectBestHintCell(safeCells);
+    if (bestCell != null) {
+      _hintsRemaining--;
+      bestCell.isHintRevealed = true;
+      
+      Future.delayed(const Duration(milliseconds: 1500), () {
+        if (bestCell.isRevealed) {
+          bestCell.isHintRevealed = false;
+          notifyListeners();
+        }
+      });
+      
+      revealCell(bestCell.row, bestCell.col);
+    }
+  }
+
+  List<Cell> _findSafeCells() {
+    final safeCells = <Cell>[];
+    for (var row in _board) {
+      for (var cell in row) {
+        if (!cell.isMine && !cell.isRevealed && !cell.isFlagged) {
+          safeCells.add(cell);
+        }
+      }
+    }
+    return safeCells;
+  }
+
+  Cell? _selectBestHintCell(List<Cell> safeCells) {
+    if (safeCells.isEmpty) return null;
+
+    final zeroCells = safeCells.where((cell) => cell.adjacentMines == 0).toList();
+    if (zeroCells.isNotEmpty) {
+      return zeroCells[Random().nextInt(zeroCells.length)];
+    }
+
+    safeCells.sort((a, b) => a.adjacentMines.compareTo(b.adjacentMines));
+    final minAdjacentMines = safeCells.first.adjacentMines;
+    final bestCells = safeCells.where((cell) => cell.adjacentMines == minAdjacentMines).toList();
+    
+    return bestCells[Random().nextInt(bestCells.length)];
+  }
+
   void _startTimer() {
     _timer?.cancel();
     _elapsedSeconds = 0;
@@ -193,6 +248,7 @@ class GameController extends ChangeNotifier {
     _revealedCount = 0;
     _elapsedSeconds = 0;
     _firstClick = true;
+    _hintsRemaining = _maxHints;
     _initializeBoard();
     notifyListeners();
   }

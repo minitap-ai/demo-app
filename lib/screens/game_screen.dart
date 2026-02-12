@@ -94,6 +94,54 @@ class GameScreen extends StatelessWidget {
                           ],
                         ),
                       ),
+                      Container(
+                        key: const Key('hint_button_container'),
+                        decoration: BoxDecoration(
+                          color: controller.canUseHint 
+                              ? Colors.amber[700] 
+                              : Colors.grey[600],
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(8),
+                            onTap: controller.canUseHint 
+                                ? controller.useHint 
+                                : null,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.lightbulb,
+                                    color: controller.canUseHint 
+                                        ? Colors.white 
+                                        : Colors.grey[400],
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    '${controller.hintsRemaining}',
+                                    key: const Key('hint_counter_text'),
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: controller.canUseHint 
+                                          ? Colors.white 
+                                          : Colors.grey[400],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                       IconButton(
                         key: const Key('reset_button'),
                         icon: Icon(

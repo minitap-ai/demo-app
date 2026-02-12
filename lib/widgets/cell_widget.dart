@@ -67,23 +67,42 @@ class CellWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    Color cellColor;
+    if (cell.isHintRevealed) {
+      cellColor = Colors.amber[200]!;
+    } else if (cell.isRevealed) {
+      cellColor = cell.isMine ? Colors.red[300]! : Colors.grey[300]!;
+    } else {
+      cellColor = Colors.grey[400]!;
+    }
+
     return GestureDetector(
       key: key,
       onTap: onTap,
       onLongPress: onLongPress,
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
         width: size,
         height: size,
         margin: const EdgeInsets.all(1),
         decoration: BoxDecoration(
-          color: cell.isRevealed
-              ? (cell.isMine ? Colors.red[300] : Colors.grey[300])
-              : Colors.grey[400],
+          color: cellColor,
           border: Border.all(
-            color: cell.isRevealed ? Colors.grey[400]! : Colors.grey[600]!,
-            width: 1,
+            color: cell.isHintRevealed 
+                ? Colors.amber[700]! 
+                : (cell.isRevealed ? Colors.grey[400]! : Colors.grey[600]!),
+            width: cell.isHintRevealed ? 2 : 1,
           ),
           borderRadius: BorderRadius.circular(2),
+          boxShadow: cell.isHintRevealed
+              ? [
+                  BoxShadow(
+                    color: Colors.amber.withOpacity(0.5),
+                    blurRadius: 8,
+                    spreadRadius: 2,
+                  ),
+                ]
+              : null,
         ),
         child: Center(child: _buildCellContent()),
       ),
