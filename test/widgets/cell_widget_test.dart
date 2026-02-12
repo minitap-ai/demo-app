@@ -155,5 +155,157 @@ void main() {
         await tester.pumpWidget(Container());
       }
     });
+
+    testWidgets('should display amber color when hint revealed', (tester) async {
+      final cell = Cell(row: 0, col: 0, isHintRevealed: true);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: CellWidget(
+              cell: cell,
+              onTap: () {},
+              onLongPress: () {},
+            ),
+          ),
+        ),
+      );
+
+      final container = tester.widget<AnimatedContainer>(
+        find.byType(AnimatedContainer),
+      );
+
+      expect(container.decoration, isA<BoxDecoration>());
+      final decoration = container.decoration as BoxDecoration;
+      expect(decoration.color, Colors.amber[200]);
+    });
+
+    testWidgets('should have amber border when hint revealed', (tester) async {
+      final cell = Cell(row: 0, col: 0, isHintRevealed: true);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: CellWidget(
+              cell: cell,
+              onTap: () {},
+              onLongPress: () {},
+            ),
+          ),
+        ),
+      );
+
+      final container = tester.widget<AnimatedContainer>(
+        find.byType(AnimatedContainer),
+      );
+
+      final decoration = container.decoration as BoxDecoration;
+      expect(decoration.border, isA<Border>());
+      final border = decoration.border as Border;
+      expect(border.top.color, Colors.amber[700]);
+      expect(border.top.width, 2);
+    });
+
+    testWidgets('should have box shadow when hint revealed', (tester) async {
+      final cell = Cell(row: 0, col: 0, isHintRevealed: true);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: CellWidget(
+              cell: cell,
+              onTap: () {},
+              onLongPress: () {},
+            ),
+          ),
+        ),
+      );
+
+      final container = tester.widget<AnimatedContainer>(
+        find.byType(AnimatedContainer),
+      );
+
+      final decoration = container.decoration as BoxDecoration;
+      expect(decoration.boxShadow, isNotNull);
+      expect(decoration.boxShadow!.length, 1);
+      expect(decoration.boxShadow![0].blurRadius, 8);
+      expect(decoration.boxShadow![0].spreadRadius, 2);
+    });
+
+    testWidgets('should not have box shadow when not hint revealed', (tester) async {
+      final cell = Cell(row: 0, col: 0, isRevealed: true);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: CellWidget(
+              cell: cell,
+              onTap: () {},
+              onLongPress: () {},
+            ),
+          ),
+        ),
+      );
+
+      final container = tester.widget<AnimatedContainer>(
+        find.byType(AnimatedContainer),
+      );
+
+      final decoration = container.decoration as BoxDecoration;
+      expect(decoration.boxShadow, isNull);
+    });
+
+    testWidgets('should use AnimatedContainer for hint animation', (tester) async {
+      final cell = Cell(row: 0, col: 0);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: CellWidget(
+              cell: cell,
+              onTap: () {},
+              onLongPress: () {},
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byType(AnimatedContainer), findsOneWidget);
+      
+      final container = tester.widget<AnimatedContainer>(
+        find.byType(AnimatedContainer),
+      );
+      expect(container.duration, const Duration(milliseconds: 300));
+    });
+
+    testWidgets('should display hint revealed cell with content', (tester) async {
+      final cell = Cell(
+        row: 0,
+        col: 0,
+        isHintRevealed: true,
+        isRevealed: true,
+        adjacentMines: 2,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: CellWidget(
+              cell: cell,
+              onTap: () {},
+              onLongPress: () {},
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('2'), findsOneWidget);
+      
+      final container = tester.widget<AnimatedContainer>(
+        find.byType(AnimatedContainer),
+      );
+      final decoration = container.decoration as BoxDecoration;
+      expect(decoration.color, Colors.amber[200]);
+    });
   });
 }
