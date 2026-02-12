@@ -4,6 +4,7 @@ class Cell {
   bool isMine;
   bool isRevealed;
   bool isFlagged;
+  bool isHintRevealed;
   int adjacentMines;
 
   Cell({
@@ -12,6 +13,7 @@ class Cell {
     this.isMine = false,
     this.isRevealed = false,
     this.isFlagged = false,
+    this.isHintRevealed = false,
     this.adjacentMines = 0,
   });
 
@@ -19,6 +21,7 @@ class Cell {
     isMine = false;
     isRevealed = false;
     isFlagged = false;
+    isHintRevealed = false;
     adjacentMines = 0;
   }
 }

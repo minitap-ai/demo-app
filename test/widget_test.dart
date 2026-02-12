@@ -78,5 +78,155 @@ void main() {
       final totalCells = Difficulty.beginner.rows * Difficulty.beginner.cols;
       expect(find.byType(GestureDetector), findsAtLeast(totalCells));
     });
+
+    testWidgets('should display hint button with initial count of 3', (tester) async {
+      await tester.pumpWidget(const MinesweeperApp());
+
+      expect(find.byKey(const Key('hint_button_container')), findsOneWidget);
+      expect(find.byIcon(Icons.lightbulb), findsOneWidget);
+      expect(find.byKey(const Key('hint_counter_text')), findsOneWidget);
+      expect(find.text('3'), findsOneWidget);
+    });
+
+    testWidgets('should disable hint button before game starts', (tester) async {
+      await tester.pumpWidget(const MinesweeperApp());
+
+      final hintContainer = tester.widget<Container>(
+        find.byKey(const Key('hint_button_container')),
+      );
+      final decoration = hintContainer.decoration as BoxDecoration;
+      expect(decoration.color, Colors.grey[600]);
+    });
+
+    testWidgets('should enable hint button after game starts', (tester) async {
+      await tester.pumpWidget(const MinesweeperApp());
+
+      final cells = find.byType(GestureDetector);
+      await tester.tap(cells.at(5));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      final hintContainer = tester.widget<Container>(
+        find.byKey(const Key('hint_button_container')),
+      );
+      final decoration = hintContainer.decoration as BoxDecoration;
+      expect(decoration.color, Colors.amber[700]);
+    });
+
+    testWidgets('should decrease hint count when hint button is tapped', (tester) async {
+      await tester.pumpWidget(const MinesweeperApp());
+
+      final cells = find.byType(GestureDetector);
+      await tester.tap(cells.at(5));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('3'), findsWidgets);
+
+      await tester.tap(find.byIcon(Icons.lightbulb));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+
+      expect(find.text('2'), findsWidgets);
+    });
+
+    testWidgets('should reveal a cell when hint is used', (tester) async {
+      await tester.pumpWidget(const MinesweeperApp());
+
+      final cells = find.byType(GestureDetector);
+      await tester.tap(cells.at(5));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      await tester.tap(find.byIcon(Icons.lightbulb));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+
+      expect(find.text('2'), findsWidgets);
+    });
+
+    testWidgets('should disable hint button when no hints remaining', (tester) async {
+      await tester.pumpWidget(const MinesweeperApp());
+
+      final cells = find.byType(GestureDetector);
+      await tester.tap(cells.at(5));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      await tester.tap(find.byIcon(Icons.lightbulb));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+      await tester.tap(find.byIcon(Icons.lightbulb));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+      await tester.tap(find.byIcon(Icons.lightbulb));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+
+      expect(find.text('0'), findsWidgets);
+
+      final hintContainer = tester.widget<Container>(
+        find.byKey(const Key('hint_button_container')),
+      );
+      final decoration = hintContainer.decoration as BoxDecoration;
+      expect(decoration.color, Colors.grey[600]);
+    });
+
+    testWidgets('should reset hint count to 3 when game is reset', (tester) async {
+      await tester.pumpWidget(const MinesweeperApp());
+
+      final cells = find.byType(GestureDetector);
+      await tester.tap(cells.at(5));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      await tester.tap(find.byIcon(Icons.lightbulb));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+
+      expect(find.text('2'), findsWidgets);
+
+      await tester.tap(find.byKey(const Key('reset_button')));
+      await tester.pump();
+
+      expect(find.text('3'), findsWidgets);
+    });
+
+    testWidgets('should reset hint count when difficulty is changed', (tester) async {
+      await tester.pumpWidget(const MinesweeperApp());
+
+      final cells = find.byType(GestureDetector);
+      await tester.tap(cells.at(5));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      await tester.tap(find.byIcon(Icons.lightbulb));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+
+      expect(find.text('2'), findsWidgets);
+
+      await tester.tap(find.byIcon(Icons.settings));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Intermediate'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('3'), findsWidgets);
+    });
+
+    testWidgets('should display hint button with lightbulb icon', (tester) async {
+      await tester.pumpWidget(const MinesweeperApp());
+
+      expect(find.byIcon(Icons.lightbulb), findsOneWidget);
+    });
+
+    testWidgets('should have hint button between timer and reset button', (tester) async {
+      await tester.pumpWidget(const MinesweeperApp());
+
+      expect(find.byIcon(Icons.timer), findsOneWidget);
+      expect(find.byKey(const Key('hint_button_container')), findsOneWidget);
+      expect(find.byKey(const Key('reset_button')), findsOneWidget);
+    });
   });
 }

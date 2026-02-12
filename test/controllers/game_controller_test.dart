@@ -497,5 +497,245 @@ void main() {
         expect(notificationCount, greaterThan(0));
       });
     });
+
+    group('Hint System', () {
+      test('should initialize with 3 hints', () {
+        expect(controller.hintsRemaining, 3);
+      });
+
+      test('should not allow hints before game starts', () {
+        expect(controller.canUseHint, false);
+      });
+
+      test('should allow hints after game starts', () {
+        controller.revealCell(0, 0);
+        expect(controller.canUseHint, true);
+      });
+
+      test('should decrease hint count when hint is used', () {
+        controller.revealCell(0, 0);
+        final initialHints = controller.hintsRemaining;
+
+        controller.useHint();
+
+        expect(controller.hintsRemaining, initialHints - 1);
+      });
+
+      test('should reveal a safe cell when hint is used', () {
+        controller.revealCell(0, 0);
+        
+        int revealedBefore = 0;
+        for (var row in controller.board) {
+          for (var cell in row) {
+            if (cell.isRevealed) revealedBefore++;
+          }
+        }
+
+        controller.useHint();
+
+        int revealedAfter = 0;
+        for (var row in controller.board) {
+          for (var cell in row) {
+            if (cell.isRevealed) revealedAfter++;
+          }
+        }
+
+        expect(revealedAfter, greaterThan(revealedBefore));
+      });
+
+      test('should not reveal a mine when hint is used', () {
+        controller.revealCell(0, 0);
+
+        for (int i = 0; i < 3; i++) {
+          controller.useHint();
+          
+          bool revealedMine = false;
+          for (var row in controller.board) {
+            for (var cell in row) {
+              if (cell.isRevealed && cell.isMine) {
+                revealedMine = true;
+                break;
+              }
+            }
+            if (revealedMine) break;
+          }
+
+          expect(revealedMine, false);
+        }
+      });
+
+      test('should mark hint-revealed cell with isHintRevealed flag', () {
+        controller.revealCell(0, 0);
+
+        controller.useHint();
+
+        bool foundHintRevealed = false;
+        for (var row in controller.board) {
+          for (var cell in row) {
+            if (cell.isHintRevealed) {
+              foundHintRevealed = true;
+              break;
+            }
+          }
+          if (foundHintRevealed) break;
+        }
+
+        expect(foundHintRevealed, true);
+      });
+
+      test('should prioritize cells with zero adjacent mines', () {
+        controller.revealCell(0, 0);
+
+        bool hasZeroAdjacentCell = false;
+        for (var row in controller.board) {
+          for (var cell in row) {
+            if (!cell.isMine && !cell.isRevealed && cell.adjacentMines == 0) {
+              hasZeroAdjacentCell = true;
+              break;
+            }
+          }
+          if (hasZeroAdjacentCell) break;
+        }
+
+        if (hasZeroAdjacentCell) {
+          controller.useHint();
+
+          bool revealedZeroCell = false;
+          for (var row in controller.board) {
+            for (var cell in row) {
+              if (cell.isHintRevealed && cell.adjacentMines == 0) {
+                revealedZeroCell = true;
+                break;
+              }
+            }
+            if (revealedZeroCell) break;
+          }
+
+          expect(revealedZeroCell, true);
+        }
+      });
+
+      test('should not allow hints when no hints remaining', () {
+        controller.revealCell(0, 0);
+
+        controller.useHint();
+        controller.useHint();
+        controller.useHint();
+
+        expect(controller.hintsRemaining, 0);
+        expect(controller.canUseHint, false);
+      });
+
+      test('should not use hint when game is not playing', () {
+        controller.revealCell(0, 0);
+
+        Cell? mineCell;
+        for (var row in controller.board) {
+          for (var cell in row) {
+            if (cell.isMine) {
+              mineCell = cell;
+              break;
+            }
+          }
+          if (mineCell != null) break;
+        }
+
+        if (mineCell != null) {
+          controller.revealCell(mineCell.row, mineCell.col);
+          expect(controller.gameState, GameState.lost);
+
+          final hintsBeforeLost = controller.hintsRemaining;
+          controller.useHint();
+
+          expect(controller.hintsRemaining, hintsBeforeLost);
+        }
+      });
+
+      test('should reset hints to 3 when game is reset', () {
+        controller.revealCell(0, 0);
+        controller.useHint();
+        controller.useHint();
+
+        expect(controller.hintsRemaining, 1);
+
+        controller.resetGame();
+
+        expect(controller.hintsRemaining, 3);
+      });
+
+      test('should reset hints when difficulty is changed', () {
+        controller.revealCell(0, 0);
+        controller.useHint();
+
+        expect(controller.hintsRemaining, 2);
+
+        controller.setDifficulty(Difficulty.intermediate);
+
+        expect(controller.hintsRemaining, 3);
+      });
+
+      test('should notify listeners when hint is used', () {
+        controller.revealCell(0, 0);
+        
+        int notificationCount = 0;
+        controller.addListener(() => notificationCount++);
+
+        controller.useHint();
+
+        expect(notificationCount, greaterThan(0));
+      });
+
+      test('should handle hint when all safe cells are revealed', () {
+        controller.revealCell(0, 0);
+
+        for (var row in controller.board) {
+          for (var cell in row) {
+            if (!cell.isMine && !cell.isRevealed && !cell.isFlagged) {
+              controller.revealCell(cell.row, cell.col);
+            }
+          }
+        }
+
+        final hintsBeforeUse = controller.hintsRemaining;
+        controller.useHint();
+
+        expect(controller.hintsRemaining, hintsBeforeUse);
+      });
+
+      test('should select cell with lowest adjacent mines when no zero cells available', () {
+        controller.revealCell(0, 0);
+
+        bool allSafeCellsHaveAdjacentMines = true;
+        for (var row in controller.board) {
+          for (var cell in row) {
+            if (!cell.isMine && !cell.isRevealed && cell.adjacentMines == 0) {
+              allSafeCellsHaveAdjacentMines = false;
+              break;
+            }
+          }
+          if (!allSafeCellsHaveAdjacentMines) break;
+        }
+
+        if (allSafeCellsHaveAdjacentMines) {
+          controller.useHint();
+
+          Cell? hintCell;
+          for (var row in controller.board) {
+            for (var cell in row) {
+              if (cell.isHintRevealed) {
+                hintCell = cell;
+                break;
+              }
+            }
+            if (hintCell != null) break;
+          }
+
+          if (hintCell != null) {
+            expect(hintCell.isMine, false);
+            expect(hintCell.isRevealed, true);
+          }
+        }
+      });
+    });
   });
 }
