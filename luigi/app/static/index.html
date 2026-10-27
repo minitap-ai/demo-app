@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Luigi's Pizzeria · Call to order</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <p class="eyebrow">Since 1987 · Delivery in 35 minutes</p>
+      <h1>Luigi's<br /><em>Pizzeria</em></h1>
+      <p class="lede">No app, no forms. Just call Luigi and tell him what you want.</p>
+
+      <div class="phone">
+        <button id="call" class="call" type="button" aria-label="Call Luigi">
+          <span class="ring"></span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1L6.6 10.8Z"/></svg>
+          <span id="call-label" class="call-label">Call Luigi</span>
+        </button>
+        <p id="status" class="status" role="status" aria-live="polite">Line open · tap to call</p>
+      </div>
+    </section>
+
+    <section class="side">
+      <div class="card transcript-card">
+        <header><h2>On the line</h2><span id="mode" class="mode"></span></header>
+        <ol id="transcript" class="transcript" aria-live="polite">
+          <li class="empty">The conversation will appear here.</li>
+        </ol>
+      </div>
+
+      <div class="card menu-card">
+        <header><h2>Menu</h2></header>
+        <ul id="menu" class="menu">
+          <li><span>Margherita</span><span>10 €</span></li>
+          <li><span>Regina</span><span>12 €</span></li>
+          <li><span>Quattro Formaggi</span><span>13 €</span></li>
+          <li><span>Diavola</span><span>13 €</span></li>
+          <li><span>Vegetariana</span><span>12 €</span></li>
+          <li><span>Calzone</span><span>14 €</span></li>
+          <li class="sep"><span>Tiramisu</span><span>6 €</span></li>
+          <li><span>Coca-Cola 33cl</span><span>3 €</span></li>
+          <li><span>San Pellegrino 50cl</span><span>4 €</span></li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { Conversation } from "https://esm.sh/@elevenlabs/client@1.32.0";
+
+    const params = new URLSearchParams(location.search);
+    const line = params.get("line") === "deaf" ? "deaf" : "default";
+    const config = await fetch("/config.json").then((r) => r.json());
+    const agentId = config.agents[line] || config.agents.default;
+
+    const button = document.getElementById("call");
+    const label = document.getElementById("call-label");
+    const statusEl = document.getElementById("status");
+    const transcript = document.getElementById("transcript");
+    document.getElementById("mode").textContent = line === "deaf" ? "line 2" : "";
+
+    let conversation = null;
+
+    function setState(state, text) {
+      document.body.dataset.state = state;
+      statusEl.textContent = text;
+      label.textContent = state === "idle" ? "Call Luigi" : "Hang up";
+      button.setAttribute("aria-label", state === "idle" ? "Call Luigi" : "Hang up");
+    }
+
+    function addLine(role, text) {
+      transcript.querySelector(".empty")?.remove();
+      const li = document.createElement("li");
+      li.className = role === "agent" ? "agent" : "caller";
+      li.innerHTML = `<b>${role === "agent" ? "Luigi" : "You"}</b><span></span>`;
+      li.querySelector("span").textContent = text;
+      transcript.append(li);
+      transcript.scrollTop = transcript.scrollHeight;
+    }
+
+    async function start() {
+      if (!agentId) return setState("idle", "Luigi's line is not configured yet");
+      setState("connecting", "Calling Luigi…");
+      try {
+        conversation = await Conversation.startSession({
+          agentId,
+          connectionType: "webrtc",
+          onConnect: () => setState("listening", "Connected · Luigi is listening"),
+          onDisconnect: () => { conversation = null; setState("idle", "Call ended · tap to call again"); },
+          onError: (message) => { console.error(message); setState("idle", "Line busy, try again"); },
+          onModeChange: ({ mode }) =>
+            setState(mode, mode === "speaking" ? "Luigi is talking…" : "Luigi is listening"),
+          onMessage: ({ role, source, message }) => addLine(role ?? (source === "ai" ? "agent" : "user"), message),
+          onInterruption: () => document.body.classList.add("interrupted"),
+        });
+      } catch (error) {
+        console.error(error);
+        conversation = null;
+        setState("idle", "Microphone unavailable");
+      }
+    }
+
+    button.addEventListener("click", async () => {
+      if (conversation) {
+        await conversation.endSession();
+      } else if (document.body.dataset.state !== "connecting") {
+        await start();
+      }
+    });
+
+    setState("idle", "Line open · tap to call");
+  </script>
+</body>
+</html>
