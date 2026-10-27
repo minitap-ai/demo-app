@@ -77,35 +77,45 @@ ELEVENLABS_API_KEY=... LUIGI_PUBLIC_URL=https://... LUIGI_API_KEY=... uv run pyt
 The phone number is the key Mini uses to find its order in the API
 (`GET /api/customers/{phone}/orders`), so each scenario uses its own number.
 
+Write each scenario as a situation, not a dialogue: who the caller is (context it may draw
+on), what it wants, and how its mind changes. Never script lines or the order in which the
+caller gives its details: the caller talks like a real customer, gives a detail only when
+Luigi asks for it, and never fills a step Luigi skips. That is what lets a criterion such as
+"Luigi asks for the phone number" fail when Luigi forgets.
+
 ### 1. The indecisive football fan
 
-**Goal**: Call Luigi's Pizzeria from the web page and order dinner for a football night.
+**Who**: Marco, a football fan, a bit in a hurry and indecisive. Phone 06 12 34 56 78,
+delivery address 12 rue de la Paix, Paris.
 
-**Persona**: Marco, phone 06 12 34 56 78, in a hurry and indecisive. Starts with one Quattro
-Formaggi, then changes his mind to two Reginas without mushrooms. Asks whether Luigi can do a
-pineapple and chorizo pizza. Delivery address: 12 rue de la Paix, Paris. Accepts the recap.
+**What happens**: he calls for tonight's match wanting one Quattro Formaggi, then changes his
+mind for two Reginas without mushrooms. He is curious whether they make a pineapple and chorizo
+pizza but won't take an alternative. He wants the order confirmed and delivered.
 
 **Setup**: before calling, delete every order of 0612345678 through the API.
 
 **Acceptance criteria**
-1. Luigi refuses the pineapple and chorizo pizza and suggests something from the menu.
-2. Luigi's spoken recap is exactly two Reginas without mushrooms, and the spoken total is 24 €.
-3. The API shows exactly one order for 0612345678, containing only 2 × Regina without
+1. Luigi asks for Marco's phone number before confirming the order.
+2. Luigi refuses the pineapple and chorizo pizza and suggests something from the menu.
+3. Luigi's spoken recap is exactly two Reginas without mushrooms, and the spoken total is 24 €.
+4. The API shows exactly one order for 0612345678, containing only 2 × Regina without
    mushrooms, with no Quattro Formaggi and no pineapple item.
-4. The order stored in the API has a total of 24 €, matching what Luigi said.
-5. The order stored in the API has the delivery address 12 rue de la Paix, Paris, and status
+5. The order stored in the API has a total of 24 €, matching what Luigi said.
+6. The order stored in the API has the delivery address 12 rue de la Paix, Paris, and status
    `confirmed`.
 
-With `stale_items` on, criteria 1, 2 and 5 pass and criteria 3 and 4 fail: the API still holds the
-Quattro Formaggi next to the Reginas (37 € or more). With `drop_removals` on, only criterion 3
-fails: the stored Reginas have their mushrooms back.
+With `stale_items` on, criteria 4 and 5 fail: the API still holds the Quattro Formaggi next to
+the Reginas (37 € or more). With `drop_removals` on, only criterion 4 fails: the stored Reginas
+have their mushrooms back. Everything else passes, because Luigi *says* the right order.
 
 ### 2. Cut him off (barge-in)
 
 **Goal**: Check that Luigi stops talking when the caller interrupts him.
 
-**Persona**: Giulia, phone 06 98 76 54 32. Asks Luigi to describe every pizza on the menu,
-and cuts him off mid-sentence to order one Margherita.
+**Who**: Giulia, phone 06 98 76 54 32, impatient.
+
+**What happens**: she asks Luigi what pizzas they have, loses patience while he lists them,
+and cuts him off to order one Margherita. Needs `converse --barge-in` (not shipped yet).
 
 **Acceptance criteria**
 1. When Giulia interrupts, Luigi stops talking within about a second.
@@ -118,8 +128,11 @@ Open `/?line=deaf` to make criteria 1 and 2 fail.
 
 Run Mini with `converse start --language it` (or `zh` for Mandarin).
 
-**Persona**: Nonna Rosa, phone 06 11 22 33 44, speaks only Italian, slowly, and wants one
-Margherita and one Tiramisu delivered to Via Toledo 15.
+**Who**: Nonna Rosa, warm, chatty and a little slow; speaks only Italian. Phone 06 11 22 33 44,
+delivery address Via Toledo 15, Napoli.
+
+**What happens**: she wants one Margherita and one Tiramisu delivered and confirmed, and never
+switches to English, even if Luigi does.
 
 **Acceptance criteria**
 1. After Rosa's first sentence, Luigi answers in Italian for the rest of the call.
