@@ -188,7 +188,8 @@ def agent_body(name: str, tool_ids: list[str], *, interruptions: bool) -> dict:
                 for code, greeting in EXTRA_LANGUAGES.items()
             },
             "tts": {"voice_id": VOICE_ID, "model_id": "eleven_flash_v2" if LANGUAGE == "en" else "eleven_flash_v2_5"},
-            "turn": {"turn_eagerness": "normal"},
+            # Mini (an AI caller) takes a few seconds per reply: don't nag it with "are you still there?".
+            "turn": {"turn_eagerness": "normal", "turn_timeout": 15},
             "conversation": {"max_duration_seconds": 600, "client_events": client_events},
         },
         "platform_settings": {"auth": {"enable_auth": False}},
