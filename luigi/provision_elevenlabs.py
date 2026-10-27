@@ -152,7 +152,20 @@ def upsert_tools() -> list[str]:
     return ids
 
 
-def agent_body(name: str, tool_ids: list[str], *, interruptions: bool) -> dict:
+def forgetful(prompt: str) -> str:
+    """Demo bug: Luigi never asks for the caller's name or phone number."""
+    out = prompt.replace(
+        "2. Get the caller's first name and phone number (read the number back digit by digit) and\n   their first item.",
+        "2. Get the caller's first item.",
+    ).replace(
+        "The moment you have the name, the phone number and one item",
+        "The moment you have one item (use the name and phone the caller gave, else \"Guest\" and \"0000000000\")",
+    )
+    assert out != prompt, "agent_prompt.md changed: update forgetful()"
+    return out
+
+
+def agent_body(name: str, tool_ids: list[str], *, interruptions: bool, prompt: str = PROMPT) -> dict:
     client_events = ["audio", "agent_response", "user_transcript", "agent_response_correction"]
     if interruptions:
         client_events.append("interruption")
@@ -164,7 +177,7 @@ def agent_body(name: str, tool_ids: list[str], *, interruptions: bool) -> dict:
                 "language": LANGUAGE,
                 "disable_first_message_interruptions": not interruptions,
                 "prompt": {
-                    "prompt": PROMPT,
+                    "prompt": prompt,
                     "llm": LLM,
                     "temperature": 0.3,
                     "tool_ids": tool_ids,
@@ -210,4 +223,8 @@ if __name__ == "__main__":
     default = upsert_agent(agent_body("Luigi", tool_ids, interruptions=True))
     deaf = upsert_agent(agent_body("Luigi (line 2, no barge-in)", tool_ids, interruptions=False))
     print(f"ELEVENLABS_AGENT_ID={default}")
+    absent = upsert_agent(
+        agent_body("Luigi (line 3, never asks the phone)", tool_ids, interruptions=True, prompt=forgetful(PROMPT))
+    )
     print(f"ELEVENLABS_AGENT_ID_DEAF={deaf}")
+    print(f"ELEVENLABS_AGENT_ID_FORGETFUL={absent}")

@@ -55,7 +55,8 @@
     import { Conversation } from "https://esm.sh/@elevenlabs/client@1.32.0";
 
     const params = new URLSearchParams(location.search);
-    const line = params.get("line") === "deaf" ? "deaf" : "default";
+    const LINES = { deaf: "line 2", forgetful: "line 3" };
+    const line = params.get("line") in LINES ? params.get("line") : "default";
     const config = await fetch("/config.json").then((r) => r.json());
     const agentId = config.agents[line] || config.agents.default;
 
@@ -63,7 +64,7 @@
     const label = document.getElementById("call-label");
     const statusEl = document.getElementById("status");
     const transcript = document.getElementById("transcript");
-    document.getElementById("mode").textContent = line === "deaf" ? "line 2" : "";
+    document.getElementById("mode").textContent = LINES[line] ?? "";
 
     let conversation = null;
 
