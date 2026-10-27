@@ -339,6 +339,7 @@ def web_config() -> JSONResponse:
             "agents": {
                 "default": os.environ.get("ELEVENLABS_AGENT_ID", ""),
                 "deaf": os.environ.get("ELEVENLABS_AGENT_ID_DEAF", ""),
+                "forgetful": os.environ.get("ELEVENLABS_AGENT_ID_FORGETFUL", ""),
             }
         }
     )

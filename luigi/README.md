@@ -24,6 +24,7 @@ Mini (browser, virtual mic) ──voice──▶ Luigi (ElevenLabs agent) ──
 |---|---|---|
 | Stale items | `PUT /admin/bugs {"stale_items": true}` (hidden from OpenAPI) | `update_order` keeps the old items in storage but answers with the new ones, so Luigi's spoken recap and total stay right while the stored order is wrong. |
 | Dropped removals | `PUT /admin/bugs {"drop_removals": true}` | Removed ingredients are dropped in storage (Regina *without* mushrooms is stored with them). Fires on every order: the safest bug for a shoot. |
+| Never asks the phone | open `/?line=forgetful` | Same Luigi, but he never asks for the caller's name or phone number. |
 | No barge-in | open `/?line=deaf` | Same Luigi, with interruptions disabled: he keeps talking when cut off. |
 
 ```bash
