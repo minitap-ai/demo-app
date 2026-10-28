@@ -14,7 +14,7 @@ Mini (browser, virtual mic) ──voice──▶ Luigi (ElevenLabs agent) ──
 | Path | What |
 |---|---|
 | `app/main.py` | FastAPI order API (`/api/*`, OpenAPI at `/openapi.json`) and the web page at `/` |
-| `app/static/` | The phone-line page (ElevenLabs JS SDK over WebRTC) |
+| `app/static/` | The phone-line page (ElevenLabs JS SDK over WebSocket; `?transport=webrtc` for WebRTC) |
 | `agent_prompt.md` | Luigi's system prompt |
 | `provision_elevenlabs.py` | Creates/updates the webhook tools and both agents |
 
