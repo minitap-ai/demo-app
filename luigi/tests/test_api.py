@@ -134,3 +134,9 @@ def test_swap_phone_digits_bug_hides_the_order_from_its_customer():
     assert client.get(f"/api/customers/{PHONE}/orders", headers=H).json() == []
     stored = client.get(f"/api/orders/{order['id']}", headers=H).json()
     assert stored["phone"] == "0612345687"
+
+
+def test_update_corrects_the_phone():
+    order = _create([{"item_id": "margherita"}])
+    client.patch(f"/api/orders/{order['id']}", headers=H, json={"phone": "06 99 88 77 66"})
+    assert [o["id"] for o in client.get("/api/customers/0699887766/orders", headers=H).json()] == [order["id"]]

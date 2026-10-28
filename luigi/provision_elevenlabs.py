@@ -104,7 +104,7 @@ TOOLS = [
     },
     {
         "name": "update_order",
-        "description": "Change the open order. Call it EVERY time the customer adds, removes or changes anything, with the complete new item list, or to save the delivery address.",
+        "description": "Change the open order. Call it EVERY time the customer adds, removes or changes anything, with the complete new item list, to save the delivery address, or to save a corrected name or phone number.",
         "api_schema": {
             "url": f"{BASE}/api/orders/{{order_id}}",
             "method": "PATCH",
@@ -116,6 +116,8 @@ TOOLS = [
                 "properties": {
                     "items": LINE_ITEMS,
                     "delivery_address": s("string", "Full delivery address as the customer said it"),
+                    "customer_name": s("string", "Corrected first name, only if the customer corrected it"),
+                    "phone": s("string", "Corrected phone number, digits only, only if the customer corrected it"),
                 },
                 "required": [],
             },
