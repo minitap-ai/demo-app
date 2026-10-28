@@ -162,7 +162,11 @@ def forgetful(prompt: str) -> str:
         "The moment you have one item (use the name and phone the caller gave, else \"Guest\" and \"0000000000\")",
     )
     assert out != prompt, "agent_prompt.md changed: update forgetful()"
-    return out
+    # Removing the step is not enough: the create_order schema still makes the LLM ask.
+    return out + (
+        "\n- Never ask the caller for their name or phone number. If they give them, use them;"
+        " otherwise create the order with \"Guest\" and \"0000000000\".\n"
+    )
 
 
 def agent_body(name: str, tool_ids: list[str], *, interruptions: bool, prompt: str = PROMPT) -> dict:
