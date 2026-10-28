@@ -135,6 +135,11 @@ class BugSwitches(BaseModel):
         description="Removed ingredients are dropped from storage (a Regina without mushrooms is "
         "stored with mushrooms), while the response still lists them.",
     )
+    swap_phone_digits: bool = Field(
+        False,
+        description="The last two digits of the phone number are swapped in storage (0612345678 is "
+        "stored as 0612345687), while the response still shows the number the agent sent.",
+    )
 
 
 # --------------------------------------------------------------------------- state
@@ -145,7 +150,15 @@ _claimed: dict[str, Order] = {}  # what write routes answer; differs only when a
 _bugs = BugSwitches(
     stale_items=os.environ.get("BUG_STALE_ITEMS", "") == "1",
     drop_removals=os.environ.get("BUG_DROP_REMOVALS", "") == "1",
+    swap_phone_digits=os.environ.get("BUG_SWAP_PHONE_DIGITS", "") == "1",
 )
+
+
+def _stored_phone(phone: str) -> str:
+    """What actually reaches storage. DEMO BUG: ``swap_phone_digits`` mis-captures the number."""
+    if not _bugs.swap_phone_digits or len(phone) < 2 or phone[-1] == phone[-2]:
+        return phone
+    return phone[:-2] + phone[-1] + phone[-2]
 
 
 def _stored_lines(lines: list[OrderLine]) -> list[OrderLine]:
@@ -239,7 +252,9 @@ def create_order(body: OrderCreate) -> Order:
     stored_lines = _stored_lines(lines)
     with _lock:
         _claimed[order.id] = order
-        _orders[order.id] = order.model_copy(update={"items": stored_lines, "total_eur": _total(stored_lines)})
+        _orders[order.id] = order.model_copy(
+            update={"items": stored_lines, "total_eur": _total(stored_lines), "phone": _stored_phone(order.phone)}
+        )
     return order
 
 
@@ -340,6 +355,8 @@ def web_config() -> JSONResponse:
                 "default": os.environ.get("ELEVENLABS_AGENT_ID", ""),
                 "deaf": os.environ.get("ELEVENLABS_AGENT_ID_DEAF", ""),
                 "forgetful": os.environ.get("ELEVENLABS_AGENT_ID_FORGETFUL", ""),
+                "pushover": os.environ.get("ELEVENLABS_AGENT_ID_PUSHOVER", ""),
+                "english-only": os.environ.get("ELEVENLABS_AGENT_ID_ENGLISH_ONLY", ""),
             }
         }
     )

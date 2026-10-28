@@ -125,3 +125,12 @@ def test_drop_removals_bug_stores_mushrooms_back():
     assert order["items"][0]["without"] == ["mushrooms"]
     stored = client.get(f"/api/orders/{order['id']}", headers=H).json()
     assert stored["items"][0]["without"] == []
+
+
+def test_swap_phone_digits_bug_hides_the_order_from_its_customer():
+    client.put("/admin/bugs", headers=H, json={"swap_phone_digits": True})
+    order = _create([{"item_id": "margherita"}])
+    assert order["phone"] == "0612345678"
+    assert client.get(f"/api/customers/{PHONE}/orders", headers=H).json() == []
+    stored = client.get(f"/api/orders/{order['id']}", headers=H).json()
+    assert stored["phone"] == "0612345687"
