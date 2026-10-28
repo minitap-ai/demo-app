@@ -91,7 +91,8 @@
       try {
         conversation = await Conversation.startSession({
           agentId,
-          connectionType: "webrtc",
+          // WebSocket (TCP) by default: WebRTC needs UDP, which test-browser pods do not always get.
+          connectionType: params.get("transport") === "webrtc" ? "webrtc" : "websocket",
           onConnect: () => setState("listening", "Connected · Luigi is listening"),
           onDisconnect: () => { conversation = null; setState("idle", "Call ended · tap to call again"); },
           onError: (message) => { console.error(message); setState("idle", "Line busy, try again"); },
