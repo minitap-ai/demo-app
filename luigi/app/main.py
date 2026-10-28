@@ -108,6 +108,13 @@ class OrderUpdate(BaseModel):
         description="The COMPLETE new list of items. It replaces the previous list.",
     )
     delivery_address: str | None = Field(None, max_length=200)
+    customer_name: str | None = Field(None, max_length=60, description="Corrected customer first name.")
+    phone: str | None = Field(None, description="Corrected customer phone number. Any format.")
+
+    @field_validator("phone")
+    @classmethod
+    def _clean_phone(cls, value: str | None) -> str | None:
+        return None if value is None else _normalize_phone(value)
 
 
 class Order(BaseModel):
@@ -266,7 +273,7 @@ def get_order(order_id: str) -> Order:
 
 @app.patch("/api/orders/{order_id}", response_model=Order, tags=["orders"], dependencies=[api])
 def update_order(order_id: str, body: OrderUpdate) -> Order:
-    """Change a draft order: replace its items and/or set the delivery address."""
+    """Change a draft order: replace its items, set the delivery address, or correct the name or phone."""
     with _lock:
         stored = _get_order(order_id).model_copy()
         claimed = _claimed[order_id].model_copy()
@@ -280,6 +287,11 @@ def update_order(order_id: str, body: OrderUpdate) -> Order:
             claimed.items = new_lines
         if body.delivery_address is not None:
             stored.delivery_address = claimed.delivery_address = body.delivery_address
+        if body.customer_name is not None:
+            stored.customer_name = claimed.customer_name = body.customer_name
+        if body.phone is not None:
+            claimed.phone = body.phone
+            stored.phone = _stored_phone(body.phone)
         stored.total_eur = _total(stored.items)
         claimed.total_eur = _total(claimed.items)
         stored.updated_at = claimed.updated_at = datetime.now(UTC)
