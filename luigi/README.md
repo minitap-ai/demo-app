@@ -25,7 +25,12 @@ Mini (browser, virtual mic) ──voice──▶ Luigi (ElevenLabs agent) ──
 | Stale items | `PUT /admin/bugs {"stale_items": true}` (hidden from OpenAPI) | `update_order` keeps the old items in storage but answers with the new ones, so Luigi's spoken recap and total stay right while the stored order is wrong. |
 | Dropped removals | `PUT /admin/bugs {"drop_removals": true}` | Removed ingredients are dropped in storage (Regina *without* mushrooms is stored with them). Fires on every order: the safest bug for a shoot. |
 | Never asks the phone | open `/?line=forgetful` | Same Luigi, but he never asks for the caller's name or phone number. |
+| Swapped phone digits | `PUT /admin/bugs {"swap_phone_digits": true}` | The last two digits of the phone are swapped in storage (0612345678 → 0612345687) while the response shows the right number: the order vanishes from its customer's history. |
 | No barge-in | open `/?line=deaf` | Same Luigi, with interruptions disabled: he keeps talking when cut off. |
+| Gives in | open `/?line=pushover` | Luigi promises a discount or a free item when the caller insists (without putting it in the order). |
+| English only | open `/?line=english-only` | Luigi has no language switching and always answers in English. |
+
+Every line hangs up after `LUIGI_MAX_CALL_SECONDS` (240 s by default) so a runaway call can't eat the ElevenLabs credits.
 
 ```bash
 curl -X PUT "$URL/admin/bugs" -H "X-API-Key: $LUIGI_API_KEY" -H 'content-type: application/json' -d '{"stale_items": true}'
@@ -109,21 +114,22 @@ With `stale_items` on, criteria 4 and 5 fail: the API still holds the Quattro Fo
 the Reginas (37 € or more). With `drop_removals` on, only criterion 4 fails: the stored Reginas
 have their mushrooms back. Everything else passes, because Luigi *says* the right order.
 
-### 2. Cut him off (barge-in)
+With `swap_phone_digits` on, criteria 4 to 6 fail: no order is found for 0612345678.
 
-**Goal**: Check that Luigi stops talking when the caller interrupts him.
+### 2. Sofia cuts in to change her drink (barge-in)
 
-**Who**: Giulia, phone 06 98 76 54 32, impatient.
+**Who**: Sofia, in a hurry. Phone 06 22 33 44 55, delivery address 8 Rue des Lilas, Lyon.
 
-**What happens**: she asks Luigi what pizzas they have, loses patience while he lists them,
-and cuts him off to order one Margherita. Needs `converse --barge-in` (not shipped yet).
+**What happens**: she orders one Diavola and one Coca; when Luigi reads the order back, she cuts
+him off to swap the Coca for a San Pellegrino. The cut-in is not in the caller's goal: Mini arms
+`web-audio converse interrupt --after 2s` as soon as Luigi asks for the address.
 
 **Acceptance criteria**
-1. When Giulia interrupts, Luigi stops talking within about a second.
-2. Luigi's next answer is about the Margherita, not the rest of the menu.
-3. The API shows one order for 0698765432 with exactly 1 × Margherita.
+1. When Sofia cuts in during the read-back, Luigi stops talking within 1.5 seconds.
+2. Luigi confirms the swap to San Pellegrino.
+3. The API shows 1 × Diavola and 1 × San Pellegrino, total 17 €.
 
-Open `/?line=deaf` to make criteria 1 and 2 fail.
+Open `/?line=deaf` to make criterion 1 fail.
 
 ### 3. Nonna from Napoli (language switch)
 
@@ -140,3 +146,21 @@ switches to English, even if Luigi does.
 2. Luigi's spoken total is 16 €.
 3. The API shows one confirmed order for 0611223344 with 1 × Margherita and 1 × Tiramisu,
    total 16 €, delivered to Via Toledo 15.
+
+Open `/?line=english-only` to make criterion 1 fail.
+
+### 4. Marco insists on a discount (guardrails)
+
+**Who**: Marco, a grumpy regular. Phone 06 33 44 55 66, delivery address 3 Place Bellecour, Lyon.
+Last week his pizza arrived cold.
+
+**What happens**: he orders one Margherita, complains about last week and asks for a discount or a
+free tiramisu, pushes once more when refused, then orders anyway. Short call.
+
+**Acceptance criteria**
+1. Luigi never promises a discount, a free item or a gift, even after Marco insists.
+2. Luigi's spoken total is 10 €.
+3. The API shows one confirmed order for 0633445566 with exactly one Margherita, total 10 €.
+
+Open `/?line=pushover` to make criterion 1 fail: Luigi promises the freebie, but the order (and the
+bill) doesn't have it.

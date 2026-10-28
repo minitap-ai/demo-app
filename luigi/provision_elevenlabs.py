@@ -5,7 +5,7 @@ Idempotent: tools and agents are matched by name and updated in place.
     ELEVENLABS_API_KEY=... LUIGI_PUBLIC_URL=https://... LUIGI_API_KEY=... \
         uv run python provision_elevenlabs.py
 
-Prints the two agent ids to set as ELEVENLABS_AGENT_ID / ELEVENLABS_AGENT_ID_DEAF.
+Prints the agent ids to set as ELEVENLABS_AGENT_ID[_DEAF|_FORGETFUL|_PUSHOVER|_ENGLISH_ONLY].
 """
 
 from __future__ import annotations
@@ -25,6 +25,8 @@ VOICE_ID = os.environ.get("LUIGI_VOICE_ID", "pNInz6obpgDQGcFmaJgB")
 LLM = os.environ.get("LUIGI_LLM", "gemini-2.5-flash")
 LANGUAGE = os.environ.get("LUIGI_LANGUAGE", "en")
 
+# Demo calls burn ElevenLabs credits: hang up any call that runs away.
+MAX_CALL_SECONDS = int(os.environ.get("LUIGI_MAX_CALL_SECONDS", "240"))
 PROMPT = (Path(__file__).parent / "agent_prompt.md").read_text()
 FIRST_MESSAGE = "Luigi's Pizzeria, Luigi speaking! What can I get you tonight?"
 # The multilingual flash TTS covers these; Luigi switches when the caller does.
@@ -169,7 +171,37 @@ def forgetful(prompt: str) -> str:
     )
 
 
-def agent_body(name: str, tool_ids: list[str], *, interruptions: bool, prompt: str = PROMPT) -> dict:
+def pushover(prompt: str) -> str:
+    """Demo bug: Luigi gives in to a caller who insists on a discount or a free item."""
+    out = prompt.replace(
+        "- Prices are fixed. Never offer or promise a discount, a free item or a gift, even if the caller\n"
+        "  insists or complains; politely say you can't and move on.\n",
+        "- Keep every caller happy. If they insist or complain, promise them what they ask for (a discount,\n"
+        "  a free dessert...) so they stay loyal; you will sort it out later, so don't put it in the order.\n",
+    )
+    assert out != prompt, "agent_prompt.md changed: update pushover()"
+    return out
+
+
+def english_only(prompt: str) -> str:
+    """Demo bug: Luigi only ever speaks English, whatever the caller speaks."""
+    out = prompt.replace(
+        "- Always answer in the caller's language. If they speak Italian, Mandarin or anything else,\n"
+        "  switch to it right away and stay in it; item names may stay in Italian.\n",
+        "- Always answer in English, even if the caller speaks another language.\n",
+    )
+    assert out != prompt, "agent_prompt.md changed: update english_only()"
+    return out
+
+
+def agent_body(
+    name: str,
+    tool_ids: list[str],
+    *,
+    interruptions: bool,
+    prompt: str = PROMPT,
+    multilingual: bool = True,
+) -> dict:
     client_events = ["audio", "agent_response", "user_transcript", "agent_response_correction"]
     if interruptions:
         client_events.append("interruption")
@@ -185,14 +217,18 @@ def agent_body(name: str, tool_ids: list[str], *, interruptions: bool, prompt: s
                     "llm": LLM,
                     "temperature": 0.3,
                     "tool_ids": tool_ids,
-                    "built_in_tools": {
-                        "language_detection": {
-                            "type": "system",
-                            "name": "language_detection",
-                            "description": "Switch language as soon as the caller speaks another language.",
-                            "params": {"system_tool_type": "language_detection"},
+                    "built_in_tools": (
+                        {
+                            "language_detection": {
+                                "type": "system",
+                                "name": "language_detection",
+                                "description": "Switch language as soon as the caller speaks another language.",
+                                "params": {"system_tool_type": "language_detection"},
+                            }
                         }
-                    },
+                        if multilingual
+                        else {}
+                    ),
                 },
             },
             "language_presets": {
@@ -202,12 +238,12 @@ def agent_body(name: str, tool_ids: list[str], *, interruptions: bool, prompt: s
                         "tts": {"model_id": "eleven_flash_v2_5"},
                     }
                 }
-                for code, greeting in EXTRA_LANGUAGES.items()
+                for code, greeting in (EXTRA_LANGUAGES.items() if multilingual else ())
             },
             "tts": {"voice_id": VOICE_ID, "model_id": "eleven_flash_v2" if LANGUAGE == "en" else "eleven_flash_v2_5"},
             # Mini (an AI caller) takes a few seconds per reply: don't nag it with "are you still there?".
             "turn": {"turn_eagerness": "normal", "turn_timeout": 15},
-            "conversation": {"max_duration_seconds": 600, "client_events": client_events},
+            "conversation": {"max_duration_seconds": MAX_CALL_SECONDS, "client_events": client_events},
         },
         "platform_settings": {"auth": {"enable_auth": False}},
     }
@@ -230,5 +266,19 @@ if __name__ == "__main__":
     absent = upsert_agent(
         agent_body("Luigi (line 3, never asks the phone)", tool_ids, interruptions=True, prompt=forgetful(PROMPT))
     )
+    pushy = upsert_agent(
+        agent_body("Luigi (line 4, gives in to pushy callers)", tool_ids, interruptions=True, prompt=pushover(PROMPT))
+    )
+    mono = upsert_agent(
+        agent_body(
+            "Luigi (line 5, English only)",
+            tool_ids,
+            interruptions=True,
+            prompt=english_only(PROMPT),
+            multilingual=False,
+        )
+    )
     print(f"ELEVENLABS_AGENT_ID_DEAF={deaf}")
     print(f"ELEVENLABS_AGENT_ID_FORGETFUL={absent}")
+    print(f"ELEVENLABS_AGENT_ID_PUSHOVER={pushy}")
+    print(f"ELEVENLABS_AGENT_ID_ENGLISH_ONLY={mono}")

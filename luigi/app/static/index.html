@@ -55,7 +55,7 @@
     import { Conversation } from "https://esm.sh/@elevenlabs/client@1.32.0";
 
     const params = new URLSearchParams(location.search);
-    const LINES = { deaf: "line 2", forgetful: "line 3" };
+    const LINES = { deaf: "line 2", forgetful: "line 3", pushover: "line 4", "english-only": "line 5" };
     const line = params.get("line") in LINES ? params.get("line") : "default";
     const config = await fetch("/config.json").then((r) => r.json());
     const agentId = config.agents[line] || config.agents.default;
