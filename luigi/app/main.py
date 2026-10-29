@@ -20,7 +20,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, HTTPException, Path as PathParam, Security, status
+from fastapi import Depends, FastAPI, HTTPException, Path as PathParam, Query, Security, status
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.security import APIKeyHeader
 from fastapi.staticfiles import StaticFiles
@@ -168,9 +168,14 @@ def _stored_phone(phone: str) -> str:
     return phone[:-2] + phone[-1] + phone[-2]
 
 
-def _stored_lines(lines: list[OrderLine]) -> list[OrderLine]:
+# Orders opened by the "v2" line (``?line=v2`` on create_order). They always get the
+# ``drop_removals`` bug, so a v1 and a v2 call can run side by side in one Minitap run.
+_v2_orders: set[str] = set()
+
+
+def _stored_lines(lines: list[OrderLine], order_id: str) -> list[OrderLine]:
     """What actually reaches storage. DEMO BUG: ``drop_removals`` forgets the removed ingredients."""
-    if not _bugs.drop_removals:
+    if not (_bugs.drop_removals or order_id in _v2_orders):
         return lines
     return [line.model_copy(update={"without": []}) for line in lines]
 
@@ -241,7 +246,7 @@ def get_menu() -> list[MenuItemOut]:
     tags=["orders"],
     dependencies=[api],
 )
-def create_order(body: OrderCreate) -> Order:
+def create_order(body: OrderCreate, line: Annotated[str | None, Query(include_in_schema=False)] = None) -> Order:
     """Open a new draft order for a customer."""
     now = datetime.now(UTC)
     lines = _price_lines(body.items)
@@ -256,8 +261,10 @@ def create_order(body: OrderCreate) -> Order:
         created_at=now,
         updated_at=now,
     )
-    stored_lines = _stored_lines(lines)
     with _lock:
+        if line == "v2":
+            _v2_orders.add(order.id)
+        stored_lines = _stored_lines(lines, order.id)
         _claimed[order.id] = order
         _orders[order.id] = order.model_copy(
             update={"items": stored_lines, "total_eur": _total(stored_lines), "phone": _stored_phone(order.phone)}
@@ -281,7 +288,7 @@ def update_order(order_id: str, body: OrderUpdate) -> Order:
             raise HTTPException(status.HTTP_409_CONFLICT, "Confirmed orders cannot be changed")
         if body.items is not None:
             new_lines = _price_lines(body.items)
-            kept = _stored_lines(new_lines)
+            kept = _stored_lines(new_lines, order_id)
             # DEMO BUG: stale_items keeps the old lines in storage.
             stored.items = [*stored.items, *kept] if _bugs.stale_items else kept
             claimed.items = new_lines
@@ -342,6 +349,7 @@ def delete_customer_orders(phone: PhonePath) -> None:
         for order_id in [i for i, o in _orders.items() if o.phone == key]:
             del _orders[order_id]
             _claimed.pop(order_id, None)
+            _v2_orders.discard(order_id)
 
 
 @app.get("/admin/bugs", response_model=BugSwitches, include_in_schema=False, dependencies=[api])
@@ -369,6 +377,7 @@ def web_config() -> JSONResponse:
                 "forgetful": os.environ.get("ELEVENLABS_AGENT_ID_FORGETFUL", ""),
                 "pushover": os.environ.get("ELEVENLABS_AGENT_ID_PUSHOVER", ""),
                 "english-only": os.environ.get("ELEVENLABS_AGENT_ID_ENGLISH_ONLY", ""),
+                "v2": os.environ.get("ELEVENLABS_AGENT_ID_V2", ""),
             }
         }
     )
