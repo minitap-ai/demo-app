@@ -11,6 +11,7 @@ PHONE = "06 12 34 56 78"
 def clean_state():
     main._orders.clear()
     main._claimed.clear()
+    main._v2_orders.clear()
     main._bugs = main.BugSwitches()
     yield
 
@@ -125,6 +126,23 @@ def test_drop_removals_bug_stores_mushrooms_back():
     assert order["items"][0]["without"] == ["mushrooms"]
     stored = client.get(f"/api/orders/{order['id']}", headers=H).json()
     assert stored["items"][0]["without"] == []
+
+
+def test_v2_line_drops_removals_only_on_its_own_orders():
+    regina = [{"item_id": "regina", "quantity": 2, "without": ["mushrooms"]}]
+    r = client.post(
+        "/api/orders?line=v2", headers=H, json={"customer_name": "Giulia", "phone": "0613572468", "items": regina}
+    )
+    v2 = r.json()
+    v1 = _create(regina)
+    assert v2["items"][0]["without"] == ["mushrooms"]
+    assert client.get(f"/api/orders/{v2['id']}", headers=H).json()["items"][0]["without"] == []
+    assert client.get(f"/api/orders/{v1['id']}", headers=H).json()["items"][0]["without"] == ["mushrooms"]
+    # Updates of a v2 order keep the bug.
+    client.patch(f"/api/orders/{v2['id']}", headers=H, json={"items": regina})
+    assert client.get(f"/api/orders/{v2['id']}", headers=H).json()["items"][0]["without"] == []
+    post = client.get("/openapi.json").json()["paths"]["/api/orders"]["post"]
+    assert all(p["name"] != "line" for p in post.get("parameters", []))
 
 
 def test_swap_phone_digits_bug_hides_the_order_from_its_customer():

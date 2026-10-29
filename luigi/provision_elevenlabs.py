@@ -5,7 +5,7 @@ Idempotent: tools and agents are matched by name and updated in place.
     ELEVENLABS_API_KEY=... LUIGI_PUBLIC_URL=https://... LUIGI_API_KEY=... \
         uv run python provision_elevenlabs.py
 
-Prints the agent ids to set as ELEVENLABS_AGENT_ID[_DEAF|_FORGETFUL|_PUSHOVER|_ENGLISH_ONLY].
+Prints the agent ids to set as ELEVENLABS_AGENT_ID[_DEAF|_FORGETFUL|_PUSHOVER|_ENGLISH_ONLY|_V2].
 """
 
 from __future__ import annotations
@@ -143,14 +143,30 @@ TOOLS = [
 ]
 
 
-def upsert_tools() -> list[str]:
-    existing = {t["tool_config"]["name"]: t["id"] for t in call("GET", "/tools").get("tools", [])}
-    ids = []
+def v2_tools() -> list[dict]:
+    """The v2 line's tools: create_order tags the order with ``?line=v2`` so the API applies
+    the v2 storage bug to it alone. Same names, so the shared prompt still fits."""
+    out = []
     for tool in TOOLS:
+        if tool["name"] == "create_order":
+            tool = {**tool, "api_schema": {**tool["api_schema"], "url": f"{BASE}/api/orders?line=v2"}}
+        out.append(tool)
+    return out
+
+
+def upsert_tools(tools: list[dict]) -> list[str]:
+    """Tools are matched by (name, url): the v2 create_order is a separate tool."""
+    existing = {
+        (t["tool_config"]["name"], t["tool_config"].get("api_schema", {}).get("url")): t["id"]
+        for t in call("GET", "/tools").get("tools", [])
+    }
+    ids = []
+    for tool in tools:
         config = {"type": "webhook", "response_timeout_secs": 10, **tool}
-        if tool["name"] in existing:
-            call("PATCH", f"/tools/{existing[tool['name']]}", {"tool_config": config})
-            ids.append(existing[tool["name"]])
+        key = (tool["name"], tool["api_schema"]["url"])
+        if key in existing:
+            call("PATCH", f"/tools/{existing[key]}", {"tool_config": config})
+            ids.append(existing[key])
         else:
             ids.append(call("POST", "/tools", {"tool_config": config})["id"])
     return ids
@@ -261,7 +277,7 @@ def upsert_agent(body: dict) -> str:
 
 
 if __name__ == "__main__":
-    tool_ids = upsert_tools()
+    tool_ids = upsert_tools(TOOLS)
     default = upsert_agent(agent_body("Luigi", tool_ids, interruptions=True))
     deaf = upsert_agent(agent_body("Luigi (line 2, no barge-in)", tool_ids, interruptions=False))
     print(f"ELEVENLABS_AGENT_ID={default}")
@@ -280,7 +296,19 @@ if __name__ == "__main__":
             multilingual=False,
         )
     )
+    # v2 = a "new release" that regressed three ways at once: English only, gives in to
+    # pushy callers, and (API side, through its tagged create_order) drops removed ingredients.
+    v2 = upsert_agent(
+        agent_body(
+            "Luigi (v2, regressed)",
+            upsert_tools(v2_tools()),
+            interruptions=True,
+            prompt=english_only(pushover(PROMPT)),
+            multilingual=False,
+        )
+    )
     print(f"ELEVENLABS_AGENT_ID_DEAF={deaf}")
     print(f"ELEVENLABS_AGENT_ID_FORGETFUL={absent}")
     print(f"ELEVENLABS_AGENT_ID_PUSHOVER={pushy}")
     print(f"ELEVENLABS_AGENT_ID_ENGLISH_ONLY={mono}")
+    print(f"ELEVENLABS_AGENT_ID_V2={v2}")

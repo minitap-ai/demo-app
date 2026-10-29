@@ -29,6 +29,7 @@ Mini (browser, virtual mic) ──voice──▶ Luigi (ElevenLabs agent) ──
 | No barge-in | open `/?line=deaf` | Same Luigi, with interruptions disabled: he keeps talking when cut off. |
 | Gives in | open `/?line=pushover` | Luigi promises a discount or a free item when the caller insists (without putting it in the order). |
 | English only | open `/?line=english-only` | Luigi has no language switching and always answers in English. |
+| v2 (regressed release) | open `/?line=v2` | English only **and** gives in **and** dropped removals, the last one on this line's orders only (its `create_order` tool posts to `/api/orders?line=v2`). Lets a v1 and a v2 call run side by side in one Minitap run, no switch to flip. |
 
 Every line hangs up after `LUIGI_MAX_CALL_SECONDS` (240 s by default) so a runaway call can't eat the ElevenLabs credits.
 
