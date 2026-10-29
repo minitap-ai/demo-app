@@ -175,7 +175,10 @@ def upsert_tools(tools: list[dict]) -> list[str]:
 def forgetful(prompt: str) -> str:
     """Demo bug: Luigi never asks for the caller's name or phone number."""
     out = prompt.replace(
-        "2. Get the caller's first name and phone number (read the number back digit by digit) and\n   their first item.",
+        "2. Get the caller's first name and phone number (read the number back digit by digit) and\n"
+        "   their first item.\n"
+        "   Then wait for the caller to say the number is right. If they correct it, read the corrected\n"
+        "   number back and wait again: a phone number is only known once the caller has confirmed it.",
         "2. Get the caller's first item.",
     ).replace(
         "The moment you have the name, the phone number and one item",
